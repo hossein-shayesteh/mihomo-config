@@ -9,6 +9,10 @@
   "enable-process": true,
   "find-process-mode": "strict",
   "tcp-concurrent": true,
+  "keep-alive-interval": 30,
+  "unified-delay": true,
+  "global-client-fingerprint": "chrome",
+  "routing-mark": 666,
   "profile": {
     "store-selected": true,
     "store-fake-ip": true
@@ -17,7 +21,19 @@
     "enable": true,
     "parse-pure-ip": true,
     "force-dns-mapping": true,
-    "override-destination": false
+    "override-destination": false,
+    "sniff": {
+      "HTTP": {
+        "ports": ["80", "8080-8880"],
+        "override-destination": true
+      },
+      "TLS": {
+        "ports": ["443", "8443"]
+      },
+      "QUIC": {
+        "ports": ["443", "8443"]
+      }
+    }
   },
   "dns": {
     "enable": true,
@@ -45,11 +61,17 @@
   },
   "tun": {
     "enable": true,
-    "stack": "gvisor",
+    "stack": "mixed",
+    "device": "Meta",
     "auto-route": true,
     "auto-redirect": true,
+    "auto-detect-interface": true,
     "strict-route": true,
-    "dns-hijack": ["any:53", "tcp://any:53"]
+    "mtu": 1500,
+    "gso": true,
+    "gso-max-size": 65536,
+    "dns-hijack": ["any:53", "tcp://any:53"],
+    "exclude-package": ["com.android.captiveportallogin"]
   },
   "proxies": [
     {
@@ -69,11 +91,11 @@
       "path": "./providers/bpb.yaml",
       "health-check": {
         "enable": true,
-        "interval": 3600,
-        "timeout": 1000,
+        "interval": 1800,
+        "timeout": 2000,
         "lazy": true,
         "expected-status": 204,
-        "url": "https://www.youtube.com/generate_204"
+        "url": "https://cp.cloudflare.com/generate_204"
       }
     }
   },
@@ -82,14 +104,40 @@
       "name": "Smart VPN",
       "type": "select",
       "lazy": true,
+      "disable-udp": false,
       "icon": "https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Global.png",
       "proxies": [
-        "Auto",
+        "Auto Fast",
         "Load Balancer",
+        "Fallback",
         "proxy1",
         "proxy2",
         "proxy3",
         "Backup-bpb"
+      ]
+    },
+    {
+      "name": "Streaming",
+      "type": "select",
+      "lazy": true,
+      "hidden": false,
+      "icon": "https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Netflix.png",
+      "proxies": ["Smart VPN", "Auto Fast", "DIRECT"]
+    },
+    {
+      "name": "Social Media",
+      "type": "select",
+      "lazy": true,
+      "hidden": false,
+      "icon": "https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Instagram.png",
+      "proxies": [
+        "Auto Fast",
+        "Smart VPN",
+        "Load Balancer",
+        "proxy1",
+        "proxy2",
+        "proxy3",
+        "DIRECT"
       ]
     },
     {
@@ -98,7 +146,7 @@
       "lazy": true,
       "hidden": false,
       "icon": "https://cdn.jsdelivr.net/gh/lige47/QuanX-icon-rule@main/icon/whatsapp(1).png",
-      "proxies": ["Smart VPN", "DIRECT"]
+      "proxies": ["Smart VPN", "Auto Fast", "DIRECT"]
     },
     {
       "name": "ChatGPT",
@@ -106,40 +154,54 @@
       "lazy": true,
       "hidden": false,
       "icon": "https://cdn.jsdelivr.net/gh/lige47/QuanX-icon-rule@main/icon/ChatGPT-green.png",
-      "proxies": ["Smart VPN", "DIRECT"]
+      "proxies": ["Smart VPN", "Auto Fast", "DIRECT"]
     },
     {
-      "name": "Auto",
+      "name": "Auto Fast",
       "type": "url-test",
-      "icon": "https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/EU.png",
-      "url": "http://gstatic.com/generate_204",
+      "icon": "https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Auto.png",
+      "url": "https://cp.cloudflare.com/generate_204",
       "lazy": true,
-      "interval": 120,
-      "tolerance": 200,
-      "hidden": true,
+      "interval": 180,
+      "tolerance": 50,
+      "timeout": 2000,
+      "hidden": false,
       "proxies": ["proxy1", "proxy2", "proxy3", "Backup-bpb"]
     },
     {
       "name": "Load Balancer",
       "type": "load-balance",
-      "strategy": "consistent-hashing",
+      "strategy": "round-robin",
       "icon": "https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Bypass.png",
-      "url": "http://gstatic.com/generate_204",
+      "url": "https://cp.cloudflare.com/generate_204",
       "lazy": true,
-      "interval": 120,
-      "tolerance": 200,
+      "interval": 180,
+      "tolerance": 100,
+      "timeout": 2000,
       "hidden": true,
       "proxies": ["proxy1", "proxy2", "proxy3"]
+    },
+    {
+      "name": "Fallback",
+      "type": "fallback",
+      "icon": "https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Available.png",
+      "url": "https://cp.cloudflare.com/generate_204",
+      "lazy": true,
+      "interval": 120,
+      "tolerance": 150,
+      "timeout": 2000,
+      "hidden": true,
+      "proxies": ["proxy1", "proxy2", "proxy3", "Backup-bpb"]
     },
     {
       "name": "Backup-bpb",
       "type": "url-test",
       "icon": "https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Server.png",
-      "url": "http://gstatic.com/generate_204",
+      "url": "https://cp.cloudflare.com/generate_204",
       "lazy": true,
-      "interval": 60,
-      "tolerance": 200,
-      "timeout": 1000,
+      "interval": 300,
+      "tolerance": 100,
+      "timeout": 3000,
       "hidden": false,
       "exclude-filter": "Domain|IPv4",
       "use": ["bpb"]
@@ -176,6 +238,46 @@
       "behavior": "classical",
       "url": "https://github.com/Chocolate4U/Iran-clash-rules/releases/latest/download/apps.txt",
       "path": "./ruleset/apps.txt",
+      "interval": 86400
+    },
+    "telegram": {
+      "type": "http",
+      "format": "text",
+      "behavior": "classical",
+      "url": "https://github.com/blackmatrix7/ios_rule_script/raw/refs/heads/master/rule/Clash/Telegram/Telegram.list",
+      "path": "./ruleset/telegram.txt",
+      "interval": 86400
+    },
+    "instagram": {
+      "type": "http",
+      "format": "text",
+      "behavior": "classical",
+      "url": "https://github.com/blackmatrix7/ios_rule_script/raw/refs/heads/master/rule/Clash/Instagram/Instagram.list",
+      "path": "./ruleset/instagram.txt",
+      "interval": 86400
+    },
+    "twitter": {
+      "type": "http",
+      "format": "text",
+      "behavior": "classical",
+      "url": "https://github.com/blackmatrix7/ios_rule_script/raw/refs/heads/master/rule/Clash/Twitter/Twitter.list",
+      "path": "./ruleset/twitter.txt",
+      "interval": 86400
+    },
+    "youtube": {
+      "type": "http",
+      "format": "text",
+      "behavior": "classical",
+      "url": "https://github.com/blackmatrix7/ios_rule_script/raw/refs/heads/master/rule/Clash/YouTube/YouTube.list",
+      "path": "./ruleset/youtube.txt",
+      "interval": 86400
+    },
+    "netflix": {
+      "type": "http",
+      "format": "text",
+      "behavior": "classical",
+      "url": "https://github.com/blackmatrix7/ios_rule_script/raw/refs/heads/master/rule/Clash/Netflix/Netflix.list",
+      "path": "./ruleset/netflix.txt",
       "interval": 86400
     },
     "whatsapp": {
@@ -254,7 +356,13 @@
   "rules": [
     "DOMAIN-SUFFIX,ir,DIRECT",
     "DOMAIN,www.cloudflare.com,DIRECT",
+    "DOMAIN,cp.cloudflare.com,DIRECT",
+    "DOMAIN-SUFFIX,cdn.jsdelivr.net,DIRECT",
+    "DOMAIN-SUFFIX,github.com,Smart VPN",
+    "DOMAIN-SUFFIX,githubusercontent.com,Smart VPN",
     "PROCESS-NAME,OUTLOOK.EXE,DIRECT",
+    "PROCESS-NAME,OneDrive.exe,DIRECT",
+    "PROCESS-NAME,Teams.exe,DIRECT",
     "RULE-SET,ads,REJECT",
     "RULE-SET,malware,REJECT",
     "RULE-SET,malware-ip,REJECT",
@@ -265,9 +373,26 @@
     "RULE-SET,ircidr,DIRECT",
     "RULE-SET,iran_other,DIRECT",
     "RULE-SET,apps,DIRECT",
-    "DOMAIN,graph.facebook.com,Smart VPN",
+    "DOMAIN,scontent.cdninstagram.com,Smart VPN",
+    "DOMAIN,scontent-iad3-1.cdninstagram.com,Smart VPN",
+    "DOMAIN,instagram.c10r.facebook.com,Smart VPN",
+    "DOMAIN,z-p3-scontent.cdninstagram.com,Smart VPN",
+    "DOMAIN-SUFFIX,cdninstagram.com,Smart VPN",
+    "DOMAIN-SUFFIX,instagram.com,Smart VPN",
+    "DOMAIN-SUFFIX,twimg.com,Smart VPN",
+    "DOMAIN-SUFFIX,twitter.com,Smart VPN",
+    "DOMAIN-SUFFIX,x.com,Smart VPN",
+    "DOMAIN-SUFFIX,t.co,Smart VPN",
+    "DOMAIN,abs.twimg.com,Smart VPN",
+    "DOMAIN,video.twimg.com,Smart VPN",
+    "RULE-SET,telegram,Smart VPN",
+    "RULE-SET,instagram,Smart VPN",
+    "RULE-SET,twitter,Smart VPN",
+    "RULE-SET,youtube,Streaming",
+    "RULE-SET,netflix,Streaming",
     "RULE-SET,whatsapp,WhatsApp",
     "RULE-SET,openai,ChatGPT",
+    "GEOIP,IR,DIRECT",
     "MATCH,Smart VPN"
   ]
 }
